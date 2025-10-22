@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Logs de Produção</title>
+    <!-- Carregamento do Tailwind CSS para estilização rápida e responsiva -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Configuração da fonte Inter e estilo de fundo */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f9fb;
+        }
+        /* Estilo para a tabela */
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        th {
+            background-color: #edf2f7;
+            font-weight: 600;
+            color: #2d3748;
+            cursor: pointer; /* Indica que colunas são clicáveis (para futura ordenação) */
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Cabeçalho (Header) -->
+    <header class="bg-indigo-600 shadow-xl p-4 md:p-6 text-white">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <h1 class="text-2xl md:text-3xl font-bold">Registro de Produção</h1>
+            <span id="user-id-display" class="text-sm bg-indigo-700 py-1 px-3 rounded-full hidden md:block" title="Seu ID de Usuário (Necessário para o armazenamento de dados)">
+                ID: Carregando...
+            </span>
+        </div>
+    </header>
+
+    <!-- Conteúdo Principal (Dashboard) -->
+    <main class="max-w-7xl mx-auto p-4 md:p-6 space-y-8">
+
+        <!-- Seção de Formulário de Registro (Card de Entrada de Dados) -->
+        <section class="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+            <h2 class="text-xl font-semibold text-gray-800 mb-6 border-b pb-2">1. Registro de Novo Lote</h2>
+            
+            <form id="production-form" class="space-y-6">
+                
+                <!-- Layout responsivo de 2 colunas para desktop -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    
+                    <!-- Coluna 1: Dados de Tempo e Identificação -->
+                    <div class="space-y-4">
+                        <label class="block">
+                            <span class="text-sm font-medium text-gray-700">DATA *</span>
+                            <input type="date" id="data" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 focus:ring-indigo-500 focus:border-indigo-500">
+                        </label>
+                        <label class="block">
+                            <span class="text-sm font-medium text-gray-700">MÁQUINA *</span>
+                            <input type="text" id="maquina" placeholder="Ex: 1613" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 focus:ring-indigo-500 focus:border-indigo-500">
+                        </label>
+                        <div class="flex space-x-4">
+                            <label class="block flex-1">
+                                <span class="text-sm font-medium text-gray-700">INÍCIO DO CORTE *</span>
+                                <input type="time" id="inicioCorte" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 focus:ring-indigo-500 focus:border-indigo-500">
+                            </label>
+                            <label class="block flex-1">
+                                <span class="text-sm font-medium text-gray-700">FIM DO CORTE *</span>
+                                <input type="time" id="fimCorte" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 focus:ring-indigo-500 focus:border-indigo-500">
+                            </label>
+                        </div>
+                         <label class="block">
+                            <span class="text-sm font-medium text-gray-700">OPERADOR *</span>
+                            <input type="text" id="operador" placeholder="Nome do Operador" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 focus:ring-indigo-500 focus:border-indigo-500">
+                        </label>
+                    </div>
+
+                    <!-- Coluna 2: Dados de Dimensão e Peso -->
+                    <div class="space-y-4">
+                        <span class="text-base font-semibold text-gray-800 block mb-2">DIMENSÃO DA PEÇA (mm)</span>
+                        
+                        <div class="grid grid-cols-3 gap-4">
+                            <label class="block">
+                                <span class="text-xs font-medium text-gray-500">ESP/Ø</span>
+                                <input type="number" step="0.01" id="espessura" placeholder="Espessura/Diâmetro" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 focus:ring-indigo-500 focus:border-indigo-500">
+                            </label>
+                            <label class="block">
+                                <span class="text-xs font-medium text-gray-500">C</span>
+                                <input type="number" step="0.01" id="comprimento" placeholder="Comprimento" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 focus:ring-indigo-500 focus:border-indigo-500">
+                            </label>
+                            <label class="block">
+                                <span class="text-xs font-medium text-gray-500">L</span>
+                                <input type="number" step="0.01" id="largura" placeholder="Largura" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 focus:ring-indigo-500 focus:border-indigo-500">
+                            </label>
+                        </div>
+
+                        <label class="block pt-4">
+                            <span class="text-sm font-medium text-gray-700">PESO (kg) *</span>
+                            <input type="number" step="0.01" id="peso" placeholder="0.00" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 focus:ring-indigo-500 focus:border-indigo-500">
+                        </label>
+                        
+                        <!-- Mensagem de status e botão de envio -->
+                        <p id="status-message" class="text-sm text-green-600 h-5"></p>
+
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t">
+                    <button type="submit" class="w-full md:w-auto px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition duration-150">
+                        Salvar Registro
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Seção de Visualização dos Logs (Card de Dados) -->
+        <section class="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+            <h2 class="text-xl font-semibold text-gray-800 mb-6 border-b pb-2">2. Logs de Produção Recentes</h2>
+            
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th>DATA</th>
+                            <th>DIA SEMANAL</th>
+                            <th>MÁQUINA</th>
+                            <th>INÍCIO</th>
+                            <th>FIM</th>
+                            <th>HORAS TOTAIS</th>
+                            <th>DIMENSÃO (mm)</th>
+                            <th>PESO (kg)</th>
+                            <th>OPERADOR</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logs-table-body" class="bg-white divide-y divide-gray-200">
+                        <!-- Os logs serão inseridos aqui pelo JavaScript -->
+                        <tr><td colspan="9" class="text-center py-4 text-gray-500">Carregando dados...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            
+        </section>
+
+    </main>
+
+    <!-- Modal para mensagens de erro/sucesso (Em substituição ao alert()) -->
+    <div id="modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden">
+        <div class="bg-white p-6 rounded-lg shadow-2xl w-80">
+            <h3 id="modal-title" class="text-lg font-bold mb-4"></h3>
+            <p id="modal-message" class="mb-6"></p>
+            <button onclick="document.getElementById('modal').classList.add('hidden')" class="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+                OK
+            </button>
+        </div>
+    </div>
+
+
+    <!-- Blocos de Script para Lógica da Aplicação e Firebase -->
+    <script type="module">
+        // Importações do Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            collection, 
+            addDoc, 
+            onSnapshot, 
+            query, 
+            orderBy, 
+            setLogLevel 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Variáveis globais de ambiente (fornecidas pelo sistema)
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        let db;
+        let auth;
+        let userId = 'loading';
+        const collectionPath = `/artifacts/${appId}/users/`;
+
+        // Função utilitária para exibir modais
+        function showModal(title, message) {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-message').textContent = message;
+            document.getElementById('modal').classList.remove('hidden');
+        }
+
+        // Função para calcular a diferença entre dois horários (em horas decimais)
+        function calculateTotalHours(startTime, endTime) {
+            const [startH, startM] = startTime.split(':').map(Number);
+            const [endH, endM] = endTime.split(':').map(Number);
+
+            const startMinutes = startH * 60 + startM;
+            let endMinutes = endH * 60 + endM;
+
+            // Se o fim do corte for antes do início (assumindo que passou para o dia seguinte)
+            if (endMinutes < startMinutes) {
+                endMinutes += 24 * 60;
+            }
+
+            const totalMinutes = endMinutes - startMinutes;
+            return (totalMinutes / 60).toFixed(2);
+        }
+        
+        // Função para obter o dia da semana em Português
+        function getDayOfWeek(dateString) {
+            const days = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+            const date = new Date(dateString + 'T00:00:00'); // Adiciona T00:00:00 para evitar problemas de fuso horário
+            return days[date.getDay()];
+        }
+
+        // 1. Inicialização do Firebase e Autenticação
+        async function initializeFirebase() {
+            if (!Object.keys(firebaseConfig).length) {
+                 showModal("Erro de Configuração", "Configuração do Firebase não encontrada. O app funcionará no modo de demonstração (sem persistência).");
+                 return;
+            }
+
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+            
+            // Ativa o log de debug do Firestore
+            setLogLevel('debug');
+
+            try {
+                // Tenta autenticar com o token personalizado ou anonimamente
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                
+                userId = auth.currentUser?.uid;
+                
+                if (userId) {
+                    document.getElementById('user-id-display').textContent = `ID: ${userId}`;
+                    document.getElementById('user-id-display').classList.remove('hidden');
+                    loadLogs(); // Inicia o carregamento dos logs após a autenticação
+                } else {
+                    showModal("Erro de Autenticação", "Não foi possível obter o ID do usuário. Os dados não serão salvos.");
+                }
+
+            } catch (error) {
+                console.error("Erro na autenticação Firebase:", error);
+                showModal("Erro de Autenticação", `Falha ao conectar ao Firebase. Erro: ${error.message}`);
+            }
+        }
+
+        // 2. Função de Salvar Log (Adiciona um novo documento)
+        document.getElementById('production-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (!db || !userId) {
+                showModal("Erro", "O banco de dados não está pronto. Tente novamente.");
+                return;
+            }
+
+            const form = e.target;
+            const data = form.data.value;
+            const maquina = form.maquina.value;
+            const inicioCorte = form.inicioCorte.value;
+            const fimCorte = form.fimCorte.value;
+            const espessura = parseFloat(form.espessura.value) || 0;
+            const comprimento = parseFloat(form.comprimento.value) || 0;
+            const largura = parseFloat(form.largura.value) || 0;
+            const peso = parseFloat(form.peso.value);
+            const operador = form.operador.value;
+
+            // Cálculo das horas totais
+            const horasTotais = calculateTotalHours(inicioCorte, fimCorte);
+            const diaSemanal = getDayOfWeek(data);
+
+            const logData = {
+                timestamp: Date.now(), // Para ordenação
+                data,
+                diaSemanal,
+                maquina,
+                inicioCorte,
+                fimCorte,
+                horasTotais,
+                dimensoes: { espessura, comprimento, largura },
+                peso,
+                operador,
+                userId: userId // Adiciona o ID do usuário para identificação
+            };
+
+            try {
+                // Salva na coleção privada do usuário: /artifacts/{appId}/users/{userId}/production_logs
+                const logsCollection = collection(db, `${collectionPath}${userId}/production_logs`);
+                await addDoc(logsCollection, logData);
+                
+                // Feedback de sucesso
+                const status = document.getElementById('status-message');
+                status.textContent = 'Registro salvo com sucesso!';
+                status.classList.remove('text-red-600');
+                status.classList.add('text-green-600');
+                form.reset();
+                setTimeout(() => status.textContent = '', 3000);
+
+            } catch (error) {
+                console.error("Erro ao salvar log:", error);
+                const status = document.getElementById('status-message');
+                status.textContent = `Erro ao salvar: ${error.message}`;
+                status.classList.remove('text-green-600');
+                status.classList.add('text-red-600');
+            }
+        });
+
+        // 3. Função de Carregar Logs em Tempo Real (onSnapshot)
+        function loadLogs() {
+            // Cria a referência para a coleção de logs do usuário
+            const logsRef = collection(db, `${collectionPath}${userId}/production_logs`);
+            
+            // Cria uma query simples (sem orderBy para evitar erro de index, ordenaremos no cliente)
+            const q = query(logsRef); 
+
+            // Escuta em tempo real
+            onSnapshot(q, (snapshot) => {
+                const logs = [];
+                snapshot.forEach((doc) => {
+                    // Adiciona o ID do documento para futuras operações (ex: exclusão)
+                    logs.push({ id: doc.id, ...doc.data() }); 
+                });
+                
+                // Ordena os logs por data/timestamp no cliente (do mais recente para o mais antigo)
+                logs.sort((a, b) => b.timestamp - a.timestamp); 
+
+                renderLogsTable(logs);
+            }, (error) => {
+                console.error("Erro ao carregar logs em tempo real:", error);
+                showModal("Erro de Conexão", "Não foi possível carregar os logs de produção.");
+            });
+        }
+        
+        // 4. Função de Renderizar a Tabela
+        function renderLogsTable(logs) {
+            const tbody = document.getElementById('logs-table-body');
+            tbody.innerHTML = ''; // Limpa a tabela
+
+            if (logs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-gray-500">Nenhum registro encontrado. Comece a registrar acima!</td></tr>';
+                return;
+            }
+
+            logs.forEach(log => {
+                const row = tbody.insertRow();
+                row.className = 'hover:bg-gray-50 transition duration-100';
+
+                // Formatações
+                const dataFormatada = new Date(log.data + 'T00:00:00').toLocaleDateString('pt-BR');
+                const dimensoes = `E:${log.dimensoes.espessura} / C:${log.dimensoes.comprimento} / L:${log.dimensoes.largura}`;
+
+                row.innerHTML = `
+                    <td class="whitespace-nowrap">${dataFormatada}</td>
+                    <td class="whitespace-nowrap capitalize">${log.diaSemanal}</td>
+                    <td class="whitespace-nowrap font-medium">${log.maquina}</td>
+                    <td class="whitespace-nowrap">${log.inicioCorte}</td>
+                    <td class="whitespace-nowrap">${log.fimCorte}</td>
+                    <td class="whitespace-nowrap font-semibold text-indigo-700">${log.horasTotais} h</td>
+                    <td class="whitespace-nowrap text-xs text-gray-500">${dimensoes}</td>
+                    <td class="whitespace-nowrap">${log.peso.toFixed(2)}</td>
+                    <td class="whitespace-nowrap">${log.operador}</td>
+                `;
+            });
+        }
+
+        // Inicia a aplicação
+        window.onload = initializeFirebase;
+
+    </script>
+</body>
+</html>
