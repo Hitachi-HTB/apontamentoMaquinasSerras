@@ -404,7 +404,7 @@
         deleteDoc,
         doc,
         setLogLevel,
-        orderBy, // ADICIONADO: Importação para ordenação de consultas no Firestore
+        orderBy, 
       } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
 
       // Variáveis globais de ambiente (fornecidas pelo sistema)
@@ -424,7 +424,7 @@
 
       // Nomes das coleções
       const LOGS_COLLECTION = "production_logs";
-      const OPERATORS_COLLECTION = "operators";
+      const OPERATORS_COLLECTION = "operators"; // Nome da subcoleção
 
       // Lista de operadores inicial (para o primeiro uso)
       const initialOperators = [
@@ -450,47 +450,57 @@
       // OS VALORES ABAIXO COM A SUA CONFIGURAÇÃO REAL.
 
       // 1. Defina o ID do App para o caminho do Firestore (Pode ser qualquer string única)
-      const LOCAL_appId = "producao-dashboard";
+      const LOCAL_appId = "producao-dashboard"; 
 
       // 2. COLE AQUI SEU OBJETO DE CONFIGURAÇÃO COMPLETO DO FIREBASE WEB SDK.
       // É FUNDAMENTAL que todos os valores (apiKey, authDomain, etc.) estejam entre aspas duplas ("").
       const LOCAL_firebaseConfig = {
-        apiKey: "AIzaSyAYO180q2kLEGmcBkHL5DmUmQ2om5xnfoo",
-        authDomain: "producao-dashboard.firebaseapp.com",
-        projectId: "producao-dashboard",
-        storageBucket: "producao-dashboard.firebasestorage.app",
-        messagingSenderId: "707703764325",
-        appId: "1:707703764325:web:5b085c98ce4d92ed2a9d8c",
-        measurementId: "G-3B2CZMC477",
+          apiKey: "AIzaSyAYO180q2kLEGmcBkHL5DmUmQ2om5xnfoo",
+          authDomain: "producao-dashboard.firebaseapp.com",
+          projectId: "producao-dashboard",
+          storageBucket: "producao-dashboard.firebasestorage.app",
+          messagingSenderId: "707703764325",
+          appId: "1:707703764325:web:5b085c98ce4d92ed2a9d8c",
+          measurementId: "G-3B2CZMC477"
       };
-
+      
       // 3. O token de autenticação customizado não existe localmente. Usaremos `null`.
-      const LOCAL_initialAuthToken = null;
+      const LOCAL_initialAuthToken = null; 
 
       // ----------------------------------------------------------------------
       // FIM DO BLOCO DE CONFIGURAÇÃO DO FIREBASE
       // ----------------------------------------------------------------------
-
+      
       // Lógica para usar a configuração do ambiente (se existir) ou a configuração LOCAL
-      // Esta lógica garante que no VS Code, a configuração LOCAL será usada se as variáveis globais não existirem.
-      const configToUse =
-        Object.keys(firebaseConfigEnvironment).length > 0
-          ? {
-              appId: appId,
-              config: firebaseConfigEnvironment,
-              token: initialAuthTokenEnvironment,
-            }
-          : {
-              appId: LOCAL_appId,
-              config: LOCAL_firebaseConfig,
-              token: LOCAL_initialAuthToken,
-            };
+      const configToUse = Object.keys(firebaseConfigEnvironment).length > 0
+          ? { appId: appId, config: firebaseConfigEnvironment, token: initialAuthTokenEnvironment }
+          : { appId: LOCAL_appId, config: LOCAL_firebaseConfig, token: LOCAL_initialAuthToken };
 
       // Variáveis finais que serão usadas no initializeApp e nas referências do Firestore
       const finalFirebaseConfig = configToUse.config;
       const finalAppId = configToUse.appId;
       const finalInitialAuthToken = configToUse.token;
 
+      // ----------------------------------------------------------------------
+      // FUNÇÕES HELPER PARA REFERÊNCIAS DO FIRESTORE
+      // ----------------------------------------------------------------------
+
+      // Logs de Produção: Dados PRIVADOS do usuário
+      function getPrivateLogsCollectionRef() {
+        return collection(
+            db,
+            `/artifacts/${finalAppId}/users/${userId}/${LOGS_COLLECTION}`
+        );
+      }
+
+      // Operadores: Dados PÚBLICOS/COMPARTILHADOS entre todos os usuários do app
+      function getPublicOperatorsCollectionRef() {
+        return collection(
+            db,
+            `/artifacts/${finalAppId}/public/data/${OPERATORS_COLLECTION}`
+        );
+      }
+      
       // Função utilitária para exibir modais informativos
       function showModal(title, message) {
         document.getElementById("modal-title").textContent = title;
@@ -501,7 +511,7 @@
       // Função para exibir modal de confirmação (substitui confirm())
       function showConfirmModal(title, message, callback) {
         // CORREÇÃO: o elemento #confirm-title agora existe no HTML
-        document.getElementById("confirm-title").textContent = title;
+        document.getElementById("confirm-title").textContent = title; 
         document.getElementById("confirm-message").textContent = message;
         confirmCallback = callback;
         document.getElementById("confirm-modal").classList.remove("hidden");
@@ -660,7 +670,7 @@
         });
       }
 
-      // Adiciona um novo operador
+      // Adiciona um novo operador (AGORA SALVANDO NO CAMINHO PÚBLICO)
       window.addOperator = async function () {
         const input = document.getElementById("new-operator-name");
         const name = input.value.trim();
@@ -673,16 +683,13 @@
           return;
         }
 
-        if (!db || !userId) {
+        if (!db) {
           showModal("Erro", "O banco de dados não está pronto.");
           return;
         }
 
         try {
-          const operatorsCollection = collection(
-            db,
-            `/artifacts/${finalAppId}/users/${userId}/${OPERATORS_COLLECTION}`
-          );
+          const operatorsCollection = getPublicOperatorsCollectionRef();
           await addDoc(operatorsCollection, {
             name: name,
             timestamp: Date.now(),
@@ -700,7 +707,7 @@
         }
       };
 
-      // Deleta um operador (AGORA USANDO O MODAL DE CONFIRMAÇÃO)
+      // Deleta um operador (AGORA DELETANDO NO CAMINHO PÚBLICO)
       window.deleteOperator = function (id) {
         showConfirmModal(
           "Confirmação de Exclusão",
@@ -708,15 +715,14 @@
           async (confirmed) => {
             if (!confirmed) return; // Se o usuário cancelar, sai da função.
 
-            if (!db || !userId) {
+            if (!db) {
               showModal("Erro", "O banco de dados não está pronto.");
               return;
             }
 
             try {
               const operatorDocRef = doc(
-                db,
-                `/artifacts/${finalAppId}/users/${userId}/${OPERATORS_COLLECTION}`,
+                getPublicOperatorsCollectionRef(),
                 id
               );
               await deleteDoc(operatorDocRef);
@@ -731,15 +737,12 @@
         );
       };
 
-      // Semeia a lista inicial de operadores (roda apenas na primeira vez)
+      // Semeia a lista inicial de operadores (AGORA VERIFICANDO O CAMINHO PÚBLICO)
       async function seedInitialOperators() {
-        if (!db || !userId) return;
+        if (!db) return;
 
         try {
-          const operatorsCollection = collection(
-            db,
-            `/artifacts/${finalAppId}/users/${userId}/${OPERATORS_COLLECTION}`
-          );
+          const operatorsCollection = getPublicOperatorsCollectionRef();
           const snapshot = await getDocs(operatorsCollection);
 
           // Se não houver operadores, adiciona a lista inicial
@@ -757,16 +760,12 @@
         }
       }
 
-      // Carrega a lista de operadores em tempo real (AGORA COM ORDENAÇÃO POR JS)
+      // Carrega a lista de operadores em tempo real (AGORA LENDO O CAMINHO PÚBLICO)
       function loadOperators() {
-        if (!db || !userId) return;
+        if (!db) return; // Não depende mais do userId, apenas do db
 
-        const operatorsRef = collection(
-          db,
-          `/artifacts/${finalAppId}/users/${userId}/${OPERATORS_COLLECTION}`
-        );
-        // MODIFICADO: Consulta simples (sem ordenação no Firestore para evitar necessidade de índice)
-        const q = query(operatorsRef);
+        const operatorsRef = getPublicOperatorsCollectionRef();
+        const q = query(operatorsRef); 
 
         onSnapshot(
           q,
@@ -775,8 +774,8 @@
             snapshot.forEach((doc) => {
               operators.push({ id: doc.id, ...doc.data() });
             });
-
-            // NOVO: Ordena em memória (JavaScript) para garantir que a lista aparece ordenada
+            
+            // Ordena em memória (JavaScript) para garantir que a lista aparece ordenada
             operators.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
 
             renderOperators(operators);
@@ -795,7 +794,7 @@
       // LOGS MANAGEMENT FUNCTIONS
       // ----------------------------------------------------------------------
 
-      // Função para deletar um log de produção pelo ID (NOVA FUNÇÃO)
+      // Função para deletar um log de produção pelo ID
       window.deleteLog = function (id) {
         showConfirmModal(
           "Confirmação de Exclusão",
@@ -810,8 +809,7 @@
 
             try {
               const logDocRef = doc(
-                db,
-                `/artifacts/${finalAppId}/users/${userId}/${LOGS_COLLECTION}`,
+                getPrivateLogsCollectionRef(),
                 id
               );
               await deleteDoc(logDocRef);
@@ -829,10 +827,7 @@
 
       // 1. Inicialização do Firebase e Autenticação
       async function initializeFirebase() {
-        if (
-          !Object.keys(finalFirebaseConfig).length ||
-          !finalFirebaseConfig.apiKey
-        ) {
+        if (!Object.keys(finalFirebaseConfig).length || !finalFirebaseConfig.apiKey) {
           // Se o objeto estiver vazio ou a chave API estiver faltando, mostra o erro.
           showModal(
             "Erro de Configuração",
@@ -864,23 +859,17 @@
             document
               .getElementById("user-id-display")
               .classList.remove("hidden");
-
+            
             // NOVO: Logs para ajudar a debugar o caminho no Firebase Console
-            console.log(
-              `%c--- DADOS DO FIREBASE ---`,
-              "font-weight: bold; color: blue;"
-            );
+            console.log(`%c--- DADOS DO FIREBASE ---`, 'font-weight: bold; color: blue;');
             console.log(`[FIREBASE INFO] App ID (Path): ${finalAppId}`);
             console.log(`[FIREBASE INFO] User ID: ${userId}`);
-            console.log(
-              `[FIREBASE INFO] Caminho Operadores: /artifacts/${finalAppId}/users/${userId}/${OPERATORS_COLLECTION}`
-            );
-            console.log(
-              `[FIREBASE INFO] Caminho Logs: /artifacts/${finalAppId}/users/${userId}/${LOGS_COLLECTION}`
-            );
+            console.log(`[FIREBASE INFO] Caminho Logs (PRIVADO): /artifacts/${finalAppId}/users/${userId}/${LOGS_COLLECTION}`);
+            console.log(`[FIREBASE INFO] Caminho Operadores (PÚBLICO): /artifacts/${finalAppId}/public/data/${OPERATORS_COLLECTION}`);
             console.log(`--------------------------`);
 
-            // Semeia e carrega a lista de operadores
+
+            // Semeia e carrega a lista de operadores (agora pública)
             await seedInitialOperators();
             loadOperators();
 
@@ -954,10 +943,7 @@
           };
 
           try {
-            const logsCollection = collection(
-              db,
-              `/artifacts/${finalAppId}/users/${userId}/${LOGS_COLLECTION}`
-            );
+            const logsCollection = getPrivateLogsCollectionRef(); // Usa a referência privada
             await addDoc(logsCollection, logData);
 
             // Feedback de sucesso
@@ -983,12 +969,8 @@
       function loadLogs() {
         if (!db || !userId) return;
 
-        const logsRef = collection(
-          db,
-          `/artifacts/${finalAppId}/users/${userId}/${LOGS_COLLECTION}`
-        );
-        // CORRIGIDO: Removido orderBy do Firestore para evitar erro de índice
-        const q = query(logsRef);
+        const logsRef = getPrivateLogsCollectionRef(); // Usa a referência privada
+        const q = query(logsRef); 
 
         onSnapshot(
           q,
@@ -998,9 +980,9 @@
               logs.push({ id: doc.id, ...doc.data() });
             });
 
-            // NOVO: Ordena em memória (JavaScript) do mais novo para o mais antigo (DESC)
-            logs.sort((a, b) => b.timestamp - a.timestamp);
-
+            // Ordena em memória (JavaScript) do mais novo para o mais antigo (DESC)
+            logs.sort((a, b) => b.timestamp - a.timestamp); 
+            
             renderLogsTable(logs);
           },
           (error) => {
@@ -1034,10 +1016,10 @@
             log.data + "T00:00:00"
           ).toLocaleDateString("pt-BR");
           // Dimensões tratam caso 'largura' seja 0 para peças redondas/circulares
-          const dimensoes =
-            log.dimensoes.largura > 0
-              ? `E:${log.dimensoes.espessura} / C:${log.dimensoes.comprimento} / L:${log.dimensoes.largura}`
-              : `Ø:${log.dimensoes.espessura} / C:${log.dimensoes.comprimento}`;
+          const dimensoes = log.dimensoes.largura > 0
+            ? `E:${log.dimensoes.espessura} / C:${log.dimensoes.comprimento} / L:${log.dimensoes.largura}`
+            : `Ø:${log.dimensoes.espessura} / C:${log.dimensoes.comprimento}`;
+
 
           // Exibe o Peso Teórico (se existir) junto ao Peso Real
           const pesoDisplay = log.pesoTeorico
