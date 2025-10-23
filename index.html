@@ -94,32 +94,6 @@
                   <option value="4540">4540</option>
                 </select>
               </label>
-
-              <!-- NOVO CAMPO: TIPO DE AÇO -->
-              <label class="block">
-                <span class="text-sm font-medium text-gray-700"
-                  >TIPO DE AÇO *</span
-                >
-                <select
-                  id="tipoAco"
-                  required
-                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 focus:ring-indigo-500 focus:border-indigo-500"
-                >
-                  <option value="" disabled selected>
-                    Selecione o Tipo de Aço
-                  </option>
-                  <option value="DAC M">DAC M</option>
-                  <option value="DAC I">DAC I</option>
-                  <option value="DAC S">DAC S</option>
-                  <option value="DAC P">DAC P</option>
-                  <option value="TOOLOX 44">TOOLOX 44</option>
-                  <option value="TOOLOX 33">TOOLOX 33</option>
-                  <option value="HARDOX 450">HARDOX 450</option>
-                  <option value="QCM8">QCM8</option>
-                </select>
-              </label>
-              <!-- FIM DO NOVO CAMPO -->
-
               <div class="flex space-x-4">
                 <label class="block flex-1">
                   <span class="text-sm font-medium text-gray-700"
@@ -274,8 +248,6 @@
                 <th>DATA</th>
                 <th>DIA SEMANAL</th>
                 <th>MÁQUINA</th>
-                <!-- NOVA COLUNA -->
-                <th>TIPO DE AÇO</th>
                 <th>INÍCIO</th>
                 <th>FIM</th>
                 <th>HORAS TOTAIS</th>
@@ -291,8 +263,8 @@
             >
               <!-- Os logs serão inseridos aqui pelo JavaScript -->
               <tr>
-                <!-- Colspan alterado para 11 para cobrir a nova coluna e AÇÕES -->
-                <td colspan="11" class="text-center py-4 text-gray-500">
+                <!-- Colspan alterado para 10 para cobrir a coluna de AÇÕES -->
+                <td colspan="10" class="text-center py-4 text-gray-500">
                   Carregando dados...
                 </td>
               </tr>
@@ -432,7 +404,7 @@
         deleteDoc,
         doc,
         setLogLevel,
-        orderBy,
+        orderBy, 
       } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
 
       // Variáveis globais de ambiente (fornecidas pelo sistema)
@@ -478,7 +450,7 @@
       // OS VALORES ABAIXO COM A SUA CONFIGURAÇÃO REAL.
 
       // 1. Defina o ID do App para o caminho do Firestore (Pode ser qualquer string única)
-      const LOCAL_appId = "producao-dashboard";
+      const LOCAL_appId = "producao-dashboard"; 
 
       // 2. COLE AQUI SEU OBJETO DE CONFIGURAÇÃO COMPLETO DO FIREBASE WEB SDK.
       // É FUNDAMENTAL que todos os valores (apiKey, authDomain, etc.) estejam entre aspas duplas ("").
@@ -491,14 +463,14 @@
           appId: "1:707703764325:web:5b085c98ce4d92ed2a9d8c",
           measurementId: "G-3B2CZMC477"
       };
-
+      
       // 3. O token de autenticação customizado não existe localmente. Usaremos `null`.
-      const LOCAL_initialAuthToken = null;
+      const LOCAL_initialAuthToken = null; 
 
       // ----------------------------------------------------------------------
       // FIM DO BLOCO DE CONFIGURAÇÃO DO FIREBASE
       // ----------------------------------------------------------------------
-
+      
       // Lógica para usar a configuração do ambiente (se existir) ou a configuração LOCAL
       const configToUse = Object.keys(firebaseConfigEnvironment).length > 0
           ? { appId: appId, config: firebaseConfigEnvironment, token: initialAuthTokenEnvironment }
@@ -529,7 +501,7 @@
             `/artifacts/${finalAppId}/public/data/${OPERATORS_COLLECTION}`
         );
       }
-
+      
       // Função utilitária para exibir modais informativos
       function showModal(title, message) {
         document.getElementById("modal-title").textContent = title;
@@ -540,7 +512,7 @@
       // Função para exibir modal de confirmação (substitui confirm())
       function showConfirmModal(title, message, callback) {
         // CORREÇÃO: o elemento #confirm-title agora existe no HTML
-        document.getElementById("confirm-title").textContent = title;
+        document.getElementById("confirm-title").textContent = title; 
         document.getElementById("confirm-message").textContent = message;
         confirmCallback = callback;
         document.getElementById("confirm-modal").classList.remove("hidden");
@@ -794,7 +766,7 @@
         if (!db) return; // Não depende mais do userId, apenas do db
 
         const operatorsRef = getOperatorsCollectionRef();
-        const q = query(operatorsRef);
+        const q = query(operatorsRef); 
 
         onSnapshot(
           q,
@@ -803,7 +775,7 @@
             snapshot.forEach((doc) => {
               operators.push({ id: doc.id, ...doc.data() });
             });
-
+            
             // Ordena em memória (JavaScript) para garantir que a lista aparece ordenada
             operators.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
 
@@ -888,7 +860,7 @@
             document
               .getElementById("user-id-display")
               .classList.remove("hidden");
-
+            
             // NOVO: Logs para ajudar a debugar o caminho no Firebase Console
             console.log(`%c--- DADOS DO FIREBASE ---`, 'font-weight: bold; color: blue;');
             console.log(`[FIREBASE INFO] App ID (Path): ${finalAppId}`);
@@ -935,8 +907,6 @@
           const form = e.target;
           const data = form.data.value;
           const maquina = form.maquina.value;
-          // CAPTURA DO NOVO CAMPO
-          const tipoAco = form.tipoAco.value;
           const inicioCorte = form.inicioCorte.value;
           const fimCorte = form.fimCorte.value;
           const espessura = parseFloat(form.espessura.value) || 0;
@@ -954,12 +924,6 @@
             return;
           }
 
-          // Valida o novo campo TIPO DE AÇO
-          if (!tipoAco) {
-            showModal("Atenção", "Por favor, selecione o Tipo de Aço.");
-            return;
-          }
-
           // Cálculo das horas totais
           const horasTotais = calculateTotalHours(inicioCorte, fimCorte);
           const diaSemanal = getDayOfWeek(data);
@@ -969,7 +933,6 @@
             data,
             diaSemanal,
             maquina,
-            tipoAco: tipoAco, // ADICIONADO AO OBJETO
             inicioCorte,
             fimCorte,
             horasTotais,
@@ -1008,7 +971,7 @@
         if (!db || !userId) return;
 
         const logsRef = getLogsCollectionRef(); // Usa a referência pública
-        const q = query(logsRef, orderBy("timestamp", "desc"));
+        const q = query(logsRef); 
 
         onSnapshot(
           q,
@@ -1019,8 +982,8 @@
             });
 
             // Ordena em memória (JavaScript) do mais novo para o mais antigo (DESC)
-            logs.sort((a, b) => b.timestamp - a.timestamp);
-
+            logs.sort((a, b) => b.timestamp - a.timestamp); 
+            
             renderLogsTable(logs);
           },
           (error) => {
@@ -1039,9 +1002,9 @@
         tbody.innerHTML = "";
 
         if (logs.length === 0) {
-          // Colspan ajustado para 11
+          // Colspan ajustado para 10
           tbody.innerHTML =
-            '<tr><td colspan="11" class="text-center py-4 text-gray-500">Nenhum registro encontrado. Comece a registrar acima!</td></tr>';
+            '<tr><td colspan="10" class="text-center py-4 text-gray-500">Nenhum registro encontrado. Comece a registrar acima!</td></tr>';
           return;
         }
 
@@ -1070,13 +1033,9 @@
               <td class="whitespace-nowrap">${dataFormatada}</td>
               <td class="whitespace-nowrap capitalize">${log.diaSemanal}</td>
               <td class="whitespace-nowrap font-medium">${log.maquina}</td>
-              <!-- DADO DA NOVA COLUNA (com fallback para dados antigos) -->
-              <td class="whitespace-nowrap">${log.tipoAco || "N/A"}</td>
               <td class="whitespace-nowrap">${log.inicioCorte}</td>
               <td class="whitespace-nowrap">${log.fimCorte}</td>
-              <td class="whitespace-nowrap font-semibold text-indigo-700">${
-                log.horasTotais
-              } h</td>
+              <td class="whitespace-nowrap font-semibold text-indigo-700">${log.horasTotais} h</td>
               <td class="whitespace-nowrap text-xs text-gray-500">${dimensoes}</td>
               <td class="whitespace-nowrap text-xs">${pesoDisplay}</td>
               <td class="whitespace-nowrap">${log.operador}</td>
