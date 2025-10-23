@@ -74,6 +74,24 @@
                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 focus:ring-indigo-500 focus:border-indigo-500"
                 />
               </label>
+
+              <!-- NOVO CAMPO: PEDIDO + ITEM (8 dígitos) -->
+              <label class="block">
+                <span class="text-sm font-medium text-gray-700"
+                  >PEDIDO + ITEM (ex: 02253501) *</span
+                >
+                <input
+                  type="text"
+                  id="pedidoItem"
+                  required
+                  maxlength="8"
+                  placeholder="00000000"
+                  oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8);"
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 font-mono text-lg tracking-wider focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </label>
+              <!-- FIM DO NOVO CAMPO -->
+
               <label class="block">
                 <span class="text-sm font-medium text-gray-700">MÁQUINA *</span>
                 <!-- CAMPO PARA SELEÇÃO DA MÁQUINA -->
@@ -263,18 +281,46 @@
 
       <!-- Seção de Visualização dos Logs (Card de Dados) -->
       <section class="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
-        <h2 class="text-xl font-semibold text-gray-800 mb-6 border-b pb-2">
-          2. Logs de Produção Recentes
-        </h2>
+        <!-- MODIFICADO: Contêiner flexível para incluir o botão de exportar -->
+        <div class="flex justify-between items-center mb-6 border-b pb-2">
+          <h2 class="text-xl font-semibold text-gray-800">
+            2. Logs de Produção Recentes
+          </h2>
+          <!-- BOTÃO DE EXPORTAÇÃO PARA CSV -->
+          <button
+            id="export-csv-btn"
+            onclick="exportToCSV()"
+            class="px-4 py-2 bg-green-600 text-white text-sm font-semibold rounded-lg shadow-md hover:bg-green-700 transition duration-150 flex items-center disabled:opacity-50"
+            disabled
+            title="Exportar todos os dados para CSV/Excel"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="w-5 h-5 mr-2"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75v-2.25M16.5 12 12 16.5m0 0L7.5 12M12 16.5V3"
+              />
+            </svg>
+            Exportar CSV
+          </button>
+        </div>
 
         <div class="overflow-x-auto">
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
                 <th>DATA</th>
+                <!-- NOVA COLUNA PARA PEDIDO + ITEM -->
+                <th>PEDIDO + ITEM</th>
                 <th>DIA SEMANAL</th>
                 <th>MÁQUINA</th>
-                <!-- NOVA COLUNA -->
                 <th>TIPO DE AÇO</th>
                 <th>INÍCIO</th>
                 <th>FIM</th>
@@ -291,8 +337,8 @@
             >
               <!-- Os logs serão inseridos aqui pelo JavaScript -->
               <tr>
-                <!-- Colspan alterado para 11 para cobrir a nova coluna e AÇÕES -->
-                <td colspan="11" class="text-center py-4 text-gray-500">
+                <!-- Colspan alterado para 12 para cobrir a nova coluna -->
+                <td colspan="12" class="text-center py-4 text-gray-500">
                   Carregando dados...
                 </td>
               </tr>
@@ -449,6 +495,9 @@
       let db;
       let auth;
       let userId = "loading";
+
+      // Global variável para armazenar os logs atuais (necessário para a exportação)
+      window.currentLogs = [];
 
       // Nomes das coleções
       const LOGS_COLLECTION = "production_logs";
@@ -897,7 +946,6 @@
             console.log(`[FIREBASE INFO] Caminho Operadores (PÚBLICO): /artifacts/${finalAppId}/public/data/${OPERATORS_COLLECTION}`);
             console.log(`--------------------------`);
 
-
             // Semeia e carrega a lista de operadores (agora pública)
             await seedInitialOperators();
             loadOperators();
@@ -934,8 +982,10 @@
 
           const form = e.target;
           const data = form.data.value;
+          // NOVO: Captura do campo PEDIDO + ITEM
+          const pedidoItem = form.pedidoItem.value.trim();
           const maquina = form.maquina.value;
-          // CAPTURA DO NOVO CAMPO
+          // CAPTURA DO CAMPO TIPO DE AÇO
           const tipoAco = form.tipoAco.value;
           const inicioCorte = form.inicioCorte.value;
           const fimCorte = form.fimCorte.value;
@@ -945,8 +995,12 @@
           const peso = parseFloat(form.peso.value);
           const operador = form.operador.value; // Pega o valor do SELECT
 
-          // Re-calcula o peso teórico final para salvar no log
-          const pesoTeorico = calculateTheoreticalWeight();
+          // --- VALIDAÇÕES ---
+          // Validação do novo campo PEDIDO + ITEM (8 dígitos numéricos)
+          if (pedidoItem.length !== 8 || isNaN(Number(pedidoItem))) {
+             showModal("Atenção", "O campo 'PEDIDO + ITEM' deve conter exatamente 8 dígitos numéricos (ex: 02253501).");
+             return;
+          }
 
           // Validar se um operador foi selecionado (o valor padrão é vazio)
           if (!operador) {
@@ -954,11 +1008,15 @@
             return;
           }
 
-          // Valida o novo campo TIPO DE AÇO
+          // Valida o campo TIPO DE AÇO
           if (!tipoAco) {
             showModal("Atenção", "Por favor, selecione o Tipo de Aço.");
             return;
           }
+          // --- FIM VALIDAÇÕES ---
+
+          // Re-calcula o peso teórico final para salvar no log
+          const pesoTeorico = calculateTheoreticalWeight();
 
           // Cálculo das horas totais
           const horasTotais = calculateTotalHours(inicioCorte, fimCorte);
@@ -967,9 +1025,10 @@
           const logData = {
             timestamp: Date.now(), // Para ordenação
             data,
+            pedidoItem: pedidoItem, // NOVO CAMPO ADICIONADO
             diaSemanal,
             maquina,
-            tipoAco: tipoAco, // ADICIONADO AO OBJETO
+            tipoAco: tipoAco,
             inicioCorte,
             fimCorte,
             horasTotais,
@@ -1021,6 +1080,12 @@
             // Ordena em memória (JavaScript) do mais novo para o mais antigo (DESC)
             logs.sort((a, b) => b.timestamp - a.timestamp);
 
+            // Salva os logs na variável global para exportação CSV
+            window.currentLogs = logs;
+
+            // Habilita ou desabilita o botão de exportação
+            document.getElementById('export-csv-btn').disabled = logs.length === 0;
+
             renderLogsTable(logs);
           },
           (error) => {
@@ -1033,15 +1098,108 @@
         );
       }
 
-      // 4. Função de Renderizar a Tabela (ATUALIZADA com botão de Ações)
+      // 4. Função para Exportar para CSV (Excel)
+      window.exportToCSV = function() {
+          if (window.currentLogs.length === 0) {
+              showModal("Exportação", "Não há dados para exportar.");
+              return;
+          }
+
+          const logs = window.currentLogs;
+          // Utiliza ponto e vírgula (;) como separador, mais amigável para o Excel em pt-BR
+          const separator = ';';
+          const lineBreak = '\n';
+          const button = document.getElementById('export-csv-btn');
+          button.disabled = true;
+
+          // 1. Cabeçalho (Header) - Campos detalhados
+          let csv = [
+              "DATA",
+              "PEDIDO_ITEM_COMPLETO",
+              "PEDIDO",
+              "ITEM",
+              "DIA_SEMANAL",
+              "MAQUINA",
+              "TIPO_ACO",
+              "INICIO_CORTE",
+              "FIM_CORTE",
+              "HORAS_TOTAIS",
+              "ESPESSURA_OU_DIAMETRO_MM",
+              "COMPRIMENTO_MM",
+              "LARGURA_MM",
+              "PESO_REAL_KG",
+              "PESO_TEORICO_KG",
+              "OPERADOR"
+          ].join(separator) + lineBreak;
+
+          // 2. Dados (Data Rows)
+          logs.forEach(log => {
+              // Extrai Pedido e Item para colunas separadas
+              const pedidoItemFull = log.pedidoItem || '';
+              const pedido = pedidoItemFull.slice(0, 6) || '';
+              const item = pedidoItemFull.slice(6, 8) || '';
+
+              // Formata números para CSV pt-BR (ponto como separador decimal)
+              const formatNumber = (value) => {
+                  return value !== undefined ? String(value).replace('.', ',') : '0,00';
+              };
+
+              const pesoReal = formatNumber(log.peso);
+              const pesoTeorico = formatNumber(log.pesoTeorico);
+              const horasTotais = formatNumber(log.horasTotais);
+              const E = formatNumber(log.dimensoes.espessura);
+              const C = formatNumber(log.dimensoes.comprimento);
+              const L = formatNumber(log.dimensoes.largura);
+
+              const row = [
+                  log.data || '', // Formato AAAA-MM-DD
+                  pedidoItemFull,
+                  pedido,
+                  item,
+                  log.diaSemanal || '',
+                  log.maquina || '',
+                  log.tipoAco || '',
+                  log.inicioCorte || '',
+                  log.fimCorte || '',
+                  horasTotais,
+                  E,
+                  C,
+                  L,
+                  pesoReal,
+                  pesoTeorico,
+                  log.operador || ''
+              ].join(separator);
+
+              csv += row + lineBreak;
+          });
+
+          // 3. Download do Arquivo
+          // Adiciona o BOM (\uFEFF) para garantir que caracteres acentuados funcionem corretamente no Excel
+          const blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8;" });
+          const link = document.createElement("a");
+          const today = new Date().toISOString().slice(0, 10);
+
+          // Nome do arquivo: logs_producao_AAAA-MM-DD.csv
+          link.download = `logs_producao_${today}.csv`;
+          link.href = URL.createObjectURL(blob);
+
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+
+          button.disabled = false;
+          showModal("Exportação Concluída", `O arquivo "logs_producao_${today}.csv" foi baixado com sucesso.`);
+      };
+
+      // 5. Função de Renderizar a Tabela (sem mudanças significativas)
       function renderLogsTable(logs) {
         const tbody = document.getElementById("logs-table-body");
         tbody.innerHTML = "";
 
         if (logs.length === 0) {
-          // Colspan ajustado para 11
+          // Colspan ajustado para 12
           tbody.innerHTML =
-            '<tr><td colspan="11" class="text-center py-4 text-gray-500">Nenhum registro encontrado. Comece a registrar acima!</td></tr>';
+            '<tr><td colspan="12" class="text-center py-4 text-gray-500">Nenhum registro encontrado. Comece a registrar acima!</td></tr>';
           return;
         }
 
@@ -1058,7 +1216,6 @@
             ? `E:${log.dimensoes.espessura} / C:${log.dimensoes.comprimento} / L:${log.dimensoes.largura}`
             : `Ø:${log.dimensoes.espessura} / C:${log.dimensoes.comprimento}`;
 
-
           // Exibe o Peso Teórico (se existir) junto ao Peso Real
           const pesoDisplay = log.pesoTeorico
             ? `${log.peso.toFixed(2)} kg (Teórico: ${log.pesoTeorico.toFixed(
@@ -1066,11 +1223,18 @@
               )})`
             : `${log.peso.toFixed(2)} kg`;
 
+          // Formatação do Pedido (Adicionando um traço visualmente)
+          const pedidoItemDisplay = log.pedidoItem
+            ? `${log.pedidoItem.slice(0, 6)}-${log.pedidoItem.slice(6, 8)}`
+            : "N/A";
+
           row.innerHTML = `
               <td class="whitespace-nowrap">${dataFormatada}</td>
+              <!-- DADO DO NOVO CAMPO PEDIDO + ITEM -->
+              <td class="whitespace-nowrap font-mono text-gray-800">${pedidoItemDisplay}</td>
               <td class="whitespace-nowrap capitalize">${log.diaSemanal}</td>
               <td class="whitespace-nowrap font-medium">${log.maquina}</td>
-              <!-- DADO DA NOVA COLUNA (com fallback para dados antigos) -->
+              <!-- DADO DA COLUNA TIPO DE AÇO -->
               <td class="whitespace-nowrap">${log.tipoAco || "N/A"}</td>
               <td class="whitespace-nowrap">${log.inicioCorte}</td>
               <td class="whitespace-nowrap">${log.fimCorte}</td>
@@ -1080,7 +1244,7 @@
               <td class="whitespace-nowrap text-xs text-gray-500">${dimensoes}</td>
               <td class="whitespace-nowrap text-xs">${pesoDisplay}</td>
               <td class="whitespace-nowrap">${log.operador}</td>
-              <!-- NOVO: Célula de Ação com o botão para deletar -->
+              <!-- Célula de Ação com o botão para deletar -->
               <td>
                   <button type="button" onclick="deleteLog('${log.id}')"
                       class="text-red-600 hover:text-red-700 transition duration-150 delete-icon" title="Excluir Registro">
