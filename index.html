@@ -112,6 +112,32 @@
                   <option value="4540">4540</option>
                 </select>
               </label>
+
+              <!-- NOVO CAMPO: TIPO DE AÇO -->
+              <label class="block">
+                <span class="text-sm font-medium text-gray-700"
+                  >TIPO DE AÇO *</span
+                >
+                <select
+                  id="tipoAco"
+                  required
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                  <option value="" disabled selected>
+                    Selecione o Tipo de Aço
+                  </option>
+                  <option value="DAC M">DAC M</option>
+                  <option value="DAC I">DAC I</option>
+                  <option value="DAC S">DAC S</option>
+                  <option value="DAC P">DAC P</option>
+                  <option value="TOOLOX 44">TOOLOX 44</option>
+                  <option value="TOOLOX 33">TOOLOX 33</option>
+                  <option value="HARDOX 450">HARDOX 450</option>
+                  <option value="QCM8">QCM8</option>
+                </select>
+              </label>
+              <!-- FIM DO NOVO CAMPO -->
+
               <div class="flex space-x-4">
                 <label class="block flex-1">
                   <span class="text-sm font-medium text-gray-700"
@@ -313,8 +339,6 @@
               <tr>
                 <!-- Colspan alterado para 12 para cobrir a nova coluna -->
                 <td colspan="12" class="text-center py-4 text-gray-500">
-                <!-- Colspan alterado para 10 para cobrir a coluna de AÇÕES -->
-                <td colspan="10" class="text-center py-4 text-gray-500">
                   Carregando dados...
                 </td>
               </tr>
@@ -454,7 +478,7 @@
         deleteDoc,
         doc,
         setLogLevel,
-        orderBy, 
+        orderBy,
       } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
 
       // Variáveis globais de ambiente (fornecidas pelo sistema)
@@ -503,7 +527,7 @@
       // OS VALORES ABAIXO COM A SUA CONFIGURAÇÃO REAL.
 
       // 1. Defina o ID do App para o caminho do Firestore (Pode ser qualquer string única)
-      const LOCAL_appId = "producao-dashboard"; 
+      const LOCAL_appId = "producao-dashboard";
 
       // 2. COLE AQUI SEU OBJETO DE CONFIGURAÇÃO COMPLETO DO FIREBASE WEB SDK.
       // É FUNDAMENTAL que todos os valores (apiKey, authDomain, etc.) estejam entre aspas duplas ("").
@@ -516,14 +540,14 @@
           appId: "1:707703764325:web:5b085c98ce4d92ed2a9d8c",
           measurementId: "G-3B2CZMC477"
       };
-      
+
       // 3. O token de autenticação customizado não existe localmente. Usaremos `null`.
-      const LOCAL_initialAuthToken = null; 
+      const LOCAL_initialAuthToken = null;
 
       // ----------------------------------------------------------------------
       // FIM DO BLOCO DE CONFIGURAÇÃO DO FIREBASE
       // ----------------------------------------------------------------------
-      
+
       // Lógica para usar a configuração do ambiente (se existir) ou a configuração LOCAL
       const configToUse = Object.keys(firebaseConfigEnvironment).length > 0
           ? { appId: appId, config: firebaseConfigEnvironment, token: initialAuthTokenEnvironment }
@@ -554,7 +578,7 @@
             `/artifacts/${finalAppId}/public/data/${OPERATORS_COLLECTION}`
         );
       }
-      
+
       // Função utilitária para exibir modais informativos
       function showModal(title, message) {
         document.getElementById("modal-title").textContent = title;
@@ -565,7 +589,7 @@
       // Função para exibir modal de confirmação (substitui confirm())
       function showConfirmModal(title, message, callback) {
         // CORREÇÃO: o elemento #confirm-title agora existe no HTML
-        document.getElementById("confirm-title").textContent = title; 
+        document.getElementById("confirm-title").textContent = title;
         document.getElementById("confirm-message").textContent = message;
         confirmCallback = callback;
         document.getElementById("confirm-modal").classList.remove("hidden");
@@ -819,7 +843,7 @@
         if (!db) return; // Não depende mais do userId, apenas do db
 
         const operatorsRef = getOperatorsCollectionRef();
-        const q = query(operatorsRef); 
+        const q = query(operatorsRef);
 
         onSnapshot(
           q,
@@ -828,7 +852,7 @@
             snapshot.forEach((doc) => {
               operators.push({ id: doc.id, ...doc.data() });
             });
-            
+
             // Ordena em memória (JavaScript) para garantir que a lista aparece ordenada
             operators.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
 
@@ -913,7 +937,7 @@
             document
               .getElementById("user-id-display")
               .classList.remove("hidden");
-            
+
             // NOVO: Logs para ajudar a debugar o caminho no Firebase Console
             console.log(`%c--- DADOS DO FIREBASE ---`, 'font-weight: bold; color: blue;');
             console.log(`[FIREBASE INFO] App ID (Path): ${finalAppId}`);
@@ -921,6 +945,7 @@
             console.log(`[FIREBASE INFO] Caminho Logs (PÚBLICO): /artifacts/${finalAppId}/public/data/${LOGS_COLLECTION}`);
             console.log(`[FIREBASE INFO] Caminho Operadores (PÚBLICO): /artifacts/${finalAppId}/public/data/${OPERATORS_COLLECTION}`);
             console.log(`--------------------------`);
+
 
             // Semeia e carrega a lista de operadores (agora pública)
             await seedInitialOperators();
@@ -1043,7 +1068,7 @@
         if (!db || !userId) return;
 
         const logsRef = getLogsCollectionRef(); // Usa a referência pública
-        const q = query(logsRef); 
+        const q = query(logsRef, orderBy("timestamp", "desc"));
 
         onSnapshot(
           q,
@@ -1055,15 +1080,14 @@
 
             // Ordena em memória (JavaScript) do mais novo para o mais antigo (DESC)
             logs.sort((a, b) => b.timestamp - a.timestamp);
-
+            
             // Salva os logs na variável global para exportação CSV
             window.currentLogs = logs;
-
+            
             // Habilita ou desabilita o botão de exportação
             document.getElementById('export-csv-btn').disabled = logs.length === 0;
 
-            logs.sort((a, b) => b.timestamp - a.timestamp); 
-            
+
             renderLogsTable(logs);
           },
           (error) => {
@@ -1075,7 +1099,7 @@
           }
         );
       }
-
+      
       // 4. Função para Exportar para CSV (Excel)
       window.exportToCSV = function() {
           if (window.currentLogs.length === 0) {
@@ -1085,7 +1109,7 @@
 
           const logs = window.currentLogs;
           // Utiliza ponto e vírgula (;) como separador, mais amigável para o Excel em pt-BR
-          const separator = ';';
+          const separator = ';'; 
           const lineBreak = '\n';
           const button = document.getElementById('export-csv-btn');
           button.disabled = true;
@@ -1116,12 +1140,12 @@
               const pedidoItemFull = log.pedidoItem || '';
               const pedido = pedidoItemFull.slice(0, 6) || '';
               const item = pedidoItemFull.slice(6, 8) || '';
-
+              
               // Formata números para CSV pt-BR (ponto como separador decimal)
               const formatNumber = (value) => {
                   return value !== undefined ? String(value).replace('.', ',') : '0,00';
               };
-
+              
               const pesoReal = formatNumber(log.peso);
               const pesoTeorico = formatNumber(log.pesoTeorico);
               const horasTotais = formatNumber(log.horasTotais);
@@ -1156,15 +1180,15 @@
           const blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8;" });
           const link = document.createElement("a");
           const today = new Date().toISOString().slice(0, 10);
-
+          
           // Nome do arquivo: logs_producao_AAAA-MM-DD.csv
           link.download = `logs_producao_${today}.csv`;
           link.href = URL.createObjectURL(blob);
-
-          document.body.appendChild(link);
+          
+          document.body.appendChild(link); 
           link.click();
           document.body.removeChild(link);
-
+          
           button.disabled = false;
           showModal("Exportação Concluída", `O arquivo "logs_producao_${today}.csv" foi baixado com sucesso.`);
       };
@@ -1178,9 +1202,6 @@
           // Colspan ajustado para 12
           tbody.innerHTML =
             '<tr><td colspan="12" class="text-center py-4 text-gray-500">Nenhum registro encontrado. Comece a registrar acima!</td></tr>';
-          // Colspan ajustado para 10
-          tbody.innerHTML =
-            '<tr><td colspan="10" class="text-center py-4 text-gray-500">Nenhum registro encontrado. Comece a registrar acima!</td></tr>';
           return;
         }
 
@@ -1197,17 +1218,19 @@
             ? `E:${log.dimensoes.espessura} / C:${log.dimensoes.comprimento} / L:${log.dimensoes.largura}`
             : `Ø:${log.dimensoes.espessura} / C:${log.dimensoes.comprimento}`;
 
+
           // Exibe o Peso Teórico (se existir) junto ao Peso Real
           const pesoDisplay = log.pesoTeorico
             ? `${log.peso.toFixed(2)} kg (Teórico: ${log.pesoTeorico.toFixed(
                 2
               )})`
             : `${log.peso.toFixed(2)} kg`;
-
+              
           // Formatação do Pedido (Adicionando um traço visualmente)
-          const pedidoItemDisplay = log.pedidoItem
-            ? `${log.pedidoItem.slice(0, 6)}-${log.pedidoItem.slice(6, 8)}`
+          const pedidoItemDisplay = log.pedidoItem 
+            ? `${log.pedidoItem.slice(0, 6)}-${log.pedidoItem.slice(6, 8)}` 
             : "N/A";
+
 
           row.innerHTML = `
               <td class="whitespace-nowrap">${dataFormatada}</td>
@@ -1219,7 +1242,9 @@
               <td class="whitespace-nowrap">${log.tipoAco || "N/A"}</td>
               <td class="whitespace-nowrap">${log.inicioCorte}</td>
               <td class="whitespace-nowrap">${log.fimCorte}</td>
-              <td class="whitespace-nowrap font-semibold text-indigo-700">${log.horasTotais} h</td>
+              <td class="whitespace-nowrap font-semibold text-indigo-700">${
+                log.horasTotais
+              } h</td>
               <td class="whitespace-nowrap text-xs text-gray-500">${dimensoes}</td>
               <td class="whitespace-nowrap text-xs">${pesoDisplay}</td>
               <td class="whitespace-nowrap">${log.operador}</td>
